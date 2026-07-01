@@ -19,3 +19,6 @@ streamlit run UI.py
 docker build -t briefai .
 docker run -p 8501:8501 --env-file .env briefai
 
+<img width="1907" height="890" alt="image" src="https://github.com/user-attachments/assets/fcdc60d8-afce-43f6-8fcf-889bf5ee0d09" />
+<img width="1862" height="858" alt="image" src="https://github.com/user-attachments/assets/f0b2a375-df8e-4279-ab99-63bd28172d67" />
+
