@@ -2,6 +2,7 @@ import streamlit as st
 from backend.agent.agent import run_agent
 import tempfile
 import os
+import streamlit.components.v1 as components
 
 # 1. Page Configuration
 st.set_page_config(page_title="BriefAI", page_icon="📄", layout="centered")
@@ -134,18 +135,6 @@ st.markdown("""
         margin-left: 3rem;
     }
 
-    .chat-assistant {
-        background: #1a1a20;
-        border: 1px solid #2a2a32;
-        border-radius: 16px 16px 16px 4px;
-        padding: 0.9rem 1.2rem;
-        margin: 0.5rem 0;
-        color: #ece9e4;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-right: 3rem;
-    }
-
     .chat-label-user {
         font-size: 0.7rem;
         font-weight: 700;
@@ -223,16 +212,6 @@ st.markdown("""
         line-height: 1.5;
         margin: 0;
     }
-
-    .answer-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.08rem;
-        text-transform: uppercase;
-        color: #e0b589;
-        margin-bottom: 1rem;
-        display: block;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -253,6 +232,8 @@ if "uploaded_file_name" not in st.session_state:
     st.session_state.uploaded_file_name = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "last_response" not in st.session_state:
+    st.session_state.last_response = ""
 
 # 5. File uploader
 uploaded_file = st.file_uploader(
@@ -271,19 +252,51 @@ if uploaded_file is not None:
 
 # 6. Chat history display
 if st.session_state.chat_history:
-    for turn in st.session_state.chat_history:
+    for i, turn in enumerate(st.session_state.chat_history):
         # User bubble
         st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="chat-user">{turn["user"]}</div>', unsafe_allow_html=True)
         # Assistant bubble
         st.markdown(f'<div class="chat-label-assistant">BriefAI</div>', unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown(turn["assistant"])
+        st.markdown(turn["assistant"])
+        # Copy button — only on latest answer
+        if i == len(st.session_state.chat_history) - 1:
+            copy_text = turn["assistant"].replace("'", "\\'").replace("\n", "\\n").replace("\r", "")
+            components.html(f"""
+                <textarea id="copy-area" style="position:fixed;top:-9999px;">{turn["assistant"]}</textarea>
+                <button onclick="
+                    var el = document.getElementById('copy-area');
+                    el.style.top = '0';
+                    el.select();
+                    el.setSelectionRange(0, 99999);
+                    document.execCommand('copy');
+                    el.style.top = '-9999px';
+                    this.innerText = '✓ Copied';
+                    this.style.color = '#4ade80';
+                    this.style.borderColor = '#4ade80';
+                    setTimeout(() => {{
+                        this.innerText = '⎘ Copy answer';
+                        this.style.color = '#6e6c78';
+                        this.style.borderColor = '#2a2a32';
+                    }}, 2000);
+                " style="
+                    background: transparent;
+                    border: 1px solid #2a2a32;
+                    color: #6e6c78;
+                    border-radius: 8px;
+                    padding: 0.3rem 0.8rem;
+                    font-size: 0.78rem;
+                    cursor: pointer;
+                    font-family: Inter, sans-serif;
+                ">⎘ Copy answer</button>
+            """, height=45)
+        st.markdown("---")
 
     # Clear chat button
     st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
     if st.button("✕ Clear chat", use_container_width=False):
         st.session_state.chat_history = []
+        st.session_state.last_response = ""
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -315,7 +328,6 @@ if not run_triggered:
 if run_triggered and user_input:
     st.session_state.user_input = ""
 
-    # Build enriched input with file path if uploaded
     enriched_input = user_input
     if st.session_state.uploaded_file_path:
         enriched_input = (
@@ -334,11 +346,11 @@ if run_triggered and user_input:
     response_text = result.get("final_response")
 
     if response_text:
-        # Append to chat history
         st.session_state.chat_history.append({
             "user": user_input,
             "assistant": response_text
         })
+        st.session_state.last_response = response_text
         st.rerun()
     else:
         st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
