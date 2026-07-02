@@ -26,7 +26,6 @@ st.markdown("""
     }
     .hero-title, .hero-subtitle, .brand-badge { animation: fadeUp 0.5s ease both; }
     .hero-subtitle { animation-delay: 0.08s; }
-    .answer-card { animation: fadeUp 0.4s ease both; }
 
     .brand-badge {
         display: inline-block;
@@ -68,17 +67,9 @@ st.markdown("""
         margin-bottom: 0.75rem;
         transition: all 0.2s ease;
     }
-    [data-testid="stFileUploader"]:hover {
-        border-color: #e0b589;
-    }
-    [data-testid="stFileUploader"] label {
-        color: #7a7880 !important;
-        font-size: 0.85rem !important;
-    }
-    [data-testid="stFileDropzoneInstructions"] {
-        color: #55535e !important;
-        font-size: 0.82rem !important;
-    }
+    [data-testid="stFileUploader"]:hover { border-color: #e0b589; }
+    [data-testid="stFileUploader"] label { color: #7a7880 !important; font-size: 0.85rem !important; }
+    [data-testid="stFileDropzoneInstructions"] { color: #55535e !important; font-size: 0.82rem !important; }
 
     .stTextInput input {
         background: #1f1f26 !important;
@@ -112,7 +103,7 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(224, 181, 137, 0.25);
     }
 
-    /* Example prompt chips */
+    /* Chip buttons */
     div[data-testid="column"] .stButton button {
         background: #1f1f26 !important;
         color: #c8c6d0 !important;
@@ -128,6 +119,67 @@ st.markdown("""
         border-color: #e0b589 !important;
         color: #f5f3ee !important;
         transform: none;
+    }
+
+    /* Chat bubbles */
+    .chat-user {
+        background: #2a2a35;
+        border: 1px solid #34343d;
+        border-radius: 16px 16px 4px 16px;
+        padding: 0.9rem 1.2rem;
+        margin: 0.5rem 0;
+        color: #f0eee9;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-left: 3rem;
+    }
+
+    .chat-assistant {
+        background: #1a1a20;
+        border: 1px solid #2a2a32;
+        border-radius: 16px 16px 16px 4px;
+        padding: 0.9rem 1.2rem;
+        margin: 0.5rem 0;
+        color: #ece9e4;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-right: 3rem;
+    }
+
+    .chat-label-user {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08rem;
+        text-transform: uppercase;
+        color: #6e6c78;
+        margin-bottom: 0.3rem;
+        text-align: right;
+    }
+
+    .chat-label-assistant {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08rem;
+        text-transform: uppercase;
+        color: #e0b589;
+        margin-bottom: 0.3rem;
+    }
+
+    .clear-btn button {
+        background: transparent !important;
+        color: #6e6c78 !important;
+        border: 1px solid #2a2a32 !important;
+        border-radius: 8px !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        padding: 0.3rem 0.8rem !important;
+        box-shadow: none !important;
+    }
+    .clear-btn button:hover {
+        color: #e0b589 !important;
+        border-color: #e0b589 !important;
+        transform: none !important;
+        box-shadow: none !important;
     }
 
     .manifesto-container {
@@ -199,6 +251,8 @@ if "uploaded_file_path" not in st.session_state:
     st.session_state.uploaded_file_path = None
 if "uploaded_file_name" not in st.session_state:
     st.session_state.uploaded_file_name = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # 5. File uploader
 uploaded_file = st.file_uploader(
@@ -215,8 +269,26 @@ if uploaded_file is not None:
         st.session_state.uploaded_file_name = uploaded_file.name
     st.success(f"📄 **{uploaded_file.name}** ready — now ask me anything about it.")
 
-# 6. Text input + Ask button inside form (enables Enter key)
-with st.form(key="query_form", clear_on_submit=False):
+# 6. Chat history display
+if st.session_state.chat_history:
+    for turn in st.session_state.chat_history:
+        # User bubble
+        st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-user">{turn["user"]}</div>', unsafe_allow_html=True)
+        # Assistant bubble
+        st.markdown(f'<div class="chat-label-assistant">BriefAI</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(turn["assistant"])
+
+    # Clear chat button
+    st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
+    if st.button("✕ Clear chat", use_container_width=False):
+        st.session_state.chat_history = []
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# 7. Input form
+with st.form(key="query_form", clear_on_submit=True):
     user_input = st.text_input(
         "Task Input",
         value=st.session_state.user_input,
@@ -225,22 +297,25 @@ with st.form(key="query_form", clear_on_submit=False):
     )
     run_triggered = st.form_submit_button("Ask BriefAI", use_container_width=True)
 
-# 7. Example chips — always visible
-chip_col1, chip_col2, chip_col3 = st.columns(3)
-examples = [
-    "List my recent documents",
-    "Summarize my resume",
-    "Find my latest proposal"
-]
-for col, example in zip([chip_col1, chip_col2, chip_col3], examples):
-    with col:
-        if st.button(example, use_container_width=True):
-            st.session_state.user_input = example
-            st.rerun()
+# 8. Example chips — always visible
+if not run_triggered:
+    chip_col1, chip_col2, chip_col3 = st.columns(3)
+    examples = [
+        "List my recent documents",
+        "Summarize my resume",
+        "Find my latest proposal"
+    ]
+    for col, example in zip([chip_col1, chip_col2, chip_col3], examples):
+        with col:
+            if st.button(example, use_container_width=True):
+                st.session_state.user_input = example
+                st.rerun()
 
-# 8. Run agent on submit
+# 9. Run agent on submit
 if run_triggered and user_input:
+    st.session_state.user_input = ""
 
+    # Build enriched input with file path if uploaded
     enriched_input = user_input
     if st.session_state.uploaded_file_path:
         enriched_input = (
@@ -251,7 +326,7 @@ if run_triggered and user_input:
 
     with st.spinner("Reading through your files..."):
         try:
-            result = run_agent(enriched_input)
+            result = run_agent(enriched_input, st.session_state.chat_history)
         except Exception:
             st.error("Something went wrong on my end — please try again in a moment.")
             st.stop()
@@ -259,43 +334,47 @@ if run_triggered and user_input:
     response_text = result.get("final_response")
 
     if response_text:
-        st.markdown('<p class="answer-label">Answer</p>', unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown(response_text)
+        # Append to chat history
+        st.session_state.chat_history.append({
+            "user": user_input,
+            "assistant": response_text
+        })
+        st.rerun()
     else:
         st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
 
-# 9. Feature grid — always visible, sits below answer naturally
-st.markdown('<div class="manifesto-container">', unsafe_allow_html=True)
-st.markdown('<div class="manifesto-header">What BriefAI can do</div>', unsafe_allow_html=True)
+# 10. Landing feature grid — always visible
+if not run_triggered:
+    st.markdown('<div class="manifesto-container">', unsafe_allow_html=True)
+    st.markdown('<div class="manifesto-header">What BriefAI can do</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3, gap="medium")
+    col1, col2, col3 = st.columns(3, gap="medium")
 
-with col1:
-    st.markdown("""
-        <div class="feature-card">
-            <span class="icon">📁</span>
-            <h4>Finds your files</h4>
-            <p>Searches your Documents, Downloads, and Desktop for the PDFs and Word docs you need.</p>
-        </div>
-    """, unsafe_allow_html=True)
+    with col1:
+        st.markdown("""
+            <div class="feature-card">
+                <span class="icon">📁</span>
+                <h4>Finds your files</h4>
+                <p>Searches your Documents, Downloads, and Desktop for the PDFs and Word docs you need.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-with col2:
-    st.markdown("""
-        <div class="feature-card">
-            <span class="icon">📖</span>
-            <h4>Reads everything</h4>
-            <p>Opens and understands PDFs, Word documents, and text files automatically.</p>
-        </div>
-    """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+            <div class="feature-card">
+                <span class="icon">📖</span>
+                <h4>Reads everything</h4>
+                <p>Opens and understands PDFs, Word documents, and text files automatically.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-with col3:
-    st.markdown("""
-        <div class="feature-card">
-            <span class="icon">✨</span>
-            <h4>Sums it up</h4>
-            <p>Pulls out exactly what matters, so you don't have to read it all yourself.</p>
-        </div>
-    """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+            <div class="feature-card">
+                <span class="icon">✨</span>
+                <h4>Sums it up</h4>
+                <p>Pulls out exactly what matters, so you don't have to read it all yourself.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)

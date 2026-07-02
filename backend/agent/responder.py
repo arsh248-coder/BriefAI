@@ -3,7 +3,15 @@ from backend.agent.prompts import RESPONDER_PROMPT
 
 client = OpenAI()
 
-def generate_response(user_input, tool_results):
+def generate_response(user_input, tool_results, chat_history=None):
+    chat_history = chat_history or []
+
+    history_context = ""
+    if chat_history:
+        history_context = "\n\nPrevious conversation for context:\n"
+        for turn in chat_history[-3:]:
+            history_context += f"User: {turn['user']}\nBriefAI: {turn['assistant']}\n"
+
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -13,7 +21,7 @@ def generate_response(user_input, tool_results):
                 "content": f"""
 User request:
 {user_input}
-
+{history_context}
 Tool results:
 {tool_results}
 """
