@@ -1,17 +1,19 @@
 import os
 from pypdf import PdfReader
 import docx
+from backend.agent.embedder import embed_document, is_document_embedded
+from backend.agent.retriever import search_documents as _search_documents
+
 
 def list_documents(folder_path: str):
     home = os.path.expanduser("~")
 
     path_map = {
         "downloads": os.path.join(home, "Downloads"),
-        "desktop": os.path.join(home, "OneDrive - McMaster University", "Desktop"),
+        "desktop": os.path.join(home, "Desktop"),
         "documents": os.path.join(home, "Documents")
     }
 
-    # 1. Determine which folders to check
     if folder_path.lower() == "all":
         folders_to_check = path_map.values()
     else:
@@ -21,12 +23,9 @@ def list_documents(folder_path: str):
         folders_to_check = [resolved]
 
     files = []
-
-    # 2. Iterate through the chosen folders
     for folder in folders_to_check:
         if os.path.exists(folder):
             for f in os.listdir(folder):
-                # Match both PDF and Word files
                 if f.lower().endswith((".pdf", ".docx")):
                     files.append({
                         "name": f,
@@ -41,14 +40,13 @@ def read_pdf(path: str):
         raise Exception(f"File not found: {path}")
 
     reader = PdfReader(path)
-
     text = ""
     for page in reader.pages:
         text += page.extract_text() or ""
 
     return {
         "path": path,
-        "content": text[:8000]  # prevent token overflow
+        "content": text[:8000]
     }
 
 
@@ -77,7 +75,44 @@ def read_word_file(file_path: str):
                     full_text.append(cell.text)
         return {
             "path": file_path,
-            "content": "\n".join(full_text)[:8000] # prevent token overflow
+            "content": "\n".join(full_text)[:8000]
         }
     except Exception as e:
         return f"Error parsing Word file: {str(e)}"
+
+
+def embed_and_index(file_path: str):
+    if is_document_embedded(file_path):
+        return {"status": "already_indexed", "file_path": file_path}
+
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext == ".pdf":
+        result = read_pdf(file_path)
+    elif ext == ".docx":
+        result = read_word_file(file_path)
+    elif ext == ".txt":
+        result = read_text_file(file_path)
+    else:
+        raise Exception(f"Unsupported file type: {ext}")
+
+    content = result.get("content", "") if isinstance(result, dict) else str(result)
+    chunks_created = embed_document(file_path, content)
+
+    return {
+        "status": "indexed",
+        "file_path": file_path,
+        "chunks_created": chunks_created
+    }
+
+
+def search_documents(query: str):
+    hits = _search_documents(query, n_results=5)
+
+    if not hits:
+        return {"status": "no_results", "message": "No relevant content found in indexed documents."}
+
+    return {
+        "status": "success",
+        "results": hits
+    }

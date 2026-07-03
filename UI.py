@@ -7,28 +7,82 @@ import streamlit.components.v1 as components
 # 1. Page Configuration
 st.set_page_config(page_title="BriefAI", page_icon="📄", layout="centered")
 
-# 2. Premium Dark CSS
-st.markdown("""
+# 2. Theme state init
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+is_dark = st.session_state.theme == "dark"
+
+# Theme variables
+if is_dark:
+    bg = "radial-gradient(circle at 50% 0%, #1c1c22 0%, #15151a 55%, #0e0e12 100%)"
+    text_primary = "#f5f3ee"
+    text_secondary = "#9b98a3"
+    text_muted = "#6e6c78"
+    surface = "#1f1f26"
+    surface2 = "#1a1a20"
+    border = "#34343d"
+    border2 = "#2a2a32"
+    chat_user_bg = "#2a2a35"
+    chat_user_border = "#34343d"
+    chat_user_color = "#f0eee9"
+    card_bg = "rgba(255,255,255,0.025)"
+    input_bg = "#1f1f26"
+    input_color = "#f0eee9"
+    input_placeholder = "#6e6c78"
+    chip_bg = "#1f1f26"
+    chip_color = "#c8c6d0"
+    chip_hover_bg = "#26262e"
+    manifesto_border = "#2a2a32"
+    manifesto_header_color = "#7a7884"
+    toggle_icon = "☀️"
+    toggle_label = "Light mode"
+else:
+    bg = "radial-gradient(circle at 50% 0%, #fdfcf9 0%, #f7f5f0 60%, #f2efe8 100%)"
+    text_primary = "#1c1c1e"
+    text_secondary = "#5a5860"
+    text_muted = "#8a8895"
+    surface = "#ffffff"
+    surface2 = "#ffffff"
+    border = "#e3e0d8"
+    border2 = "#ece8df"
+    chat_user_bg = "#f0ece3"
+    chat_user_border = "#e3e0d8"
+    chat_user_color = "#1c1c1e"
+    card_bg = "rgba(255,255,255,0.8)"
+    input_bg = "#ffffff"
+    input_color = "#1c1c1e"
+    input_placeholder = "#a8a6b0"
+    chip_bg = "#ffffff"
+    chip_color = "#4a4a52"
+    chip_hover_bg = "#faf8f3"
+    manifesto_border = "#ece8df"
+    manifesto_header_color = "#a8a6b0"
+    toggle_icon = "🌙"
+    toggle_label = "Dark mode"
+
+# 3. CSS
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap');
 
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
 
-    .stApp {
-        background: radial-gradient(circle at 50% 0%, #1c1c22 0%, #15151a 55%, #0e0e12 100%);
-        color: #e8e6e1;
-    }
+    .stApp {{
+        background: {bg};
+        color: {text_primary};
+    }}
 
-    .main .block-container { padding-top: 5rem; max-width: 760px; }
+    .main .block-container {{ padding-top: 5rem; max-width: 760px; }}
 
-    @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .hero-title, .hero-subtitle, .brand-badge { animation: fadeUp 0.5s ease both; }
-    .hero-subtitle { animation-delay: 0.08s; }
+    @keyframes fadeUp {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .hero-title, .hero-subtitle, .brand-badge {{ animation: fadeUp 0.5s ease both; }}
+    .hero-subtitle {{ animation-delay: 0.08s; }}
 
-    .brand-badge {
+    .brand-badge {{
         display: inline-block;
         font-size: 0.72rem;
         font-weight: 700;
@@ -40,55 +94,74 @@ st.markdown("""
         padding: 0.35rem 0.8rem;
         border-radius: 20px;
         margin-bottom: 1rem;
-    }
+    }}
 
-    .hero-title {
+    .hero-title {{
         font-family: 'Fraunces', serif;
         font-weight: 600;
         font-size: 2.8rem;
         letter-spacing: -0.04rem;
-        color: #f5f3ee;
+        color: {text_primary};
         line-height: 1.15;
         margin-bottom: 0.5rem;
-    }
+    }}
 
-    .hero-subtitle {
-        color: #9b98a3;
+    .hero-subtitle {{
+        color: {text_secondary};
         font-size: 1.1rem;
         line-height: 1.6;
         margin-bottom: 2rem;
-    }
+    }}
+
+    /* Toggle button */
+    .toggle-btn button {{
+        background: transparent !important;
+        color: {text_muted} !important;
+        border: 1px solid {border2} !important;
+        border-radius: 999px !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        padding: 0.35rem 1rem !important;
+        box-shadow: none !important;
+        float: right;
+    }}
+    .toggle-btn button:hover {{
+        color: #e0b589 !important;
+        border-color: #e0b589 !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }}
 
     /* File uploader */
-    [data-testid="stFileUploader"] {
+    [data-testid="stFileUploader"] {{
         background: rgba(255,255,255,0.02);
-        border: 1.5px dashed #2e2e38;
+        border: 1.5px dashed {border};
         border-radius: 14px;
         padding: 0.5rem 1rem;
         margin-bottom: 0.75rem;
         transition: all 0.2s ease;
-    }
-    [data-testid="stFileUploader"]:hover { border-color: #e0b589; }
-    [data-testid="stFileUploader"] label { color: #7a7880 !important; font-size: 0.85rem !important; }
-    [data-testid="stFileDropzoneInstructions"] { color: #55535e !important; font-size: 0.82rem !important; }
+    }}
+    [data-testid="stFileUploader"]:hover {{ border-color: #e0b589; }}
+    [data-testid="stFileUploader"] label {{ color: {text_muted} !important; font-size: 0.85rem !important; }}
+    [data-testid="stFileDropzoneInstructions"] {{ color: {text_muted} !important; font-size: 0.82rem !important; }}
 
-    .stTextInput input {
-        background: #1f1f26 !important;
-        border: 1px solid #34343d !important;
+    .stTextInput input {{
+        background: {input_bg} !important;
+        border: 1px solid {border} !important;
         border-radius: 14px !important;
-        color: #f0eee9 !important;
+        color: {input_color} !important;
         padding: 1.1rem 1.3rem !important;
         font-size: 1.05rem !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
         transition: all 0.2s ease;
-    }
-    .stTextInput input::placeholder { color: #6e6c78 !important; }
-    .stTextInput input:focus {
+    }}
+    .stTextInput input::placeholder {{ color: {input_placeholder} !important; }}
+    .stTextInput input:focus {{
         border-color: #e0b589 !important;
         box-shadow: 0 0 0 4px rgba(224, 181, 137, 0.12) !important;
-    }
+    }}
 
-    .stButton button {
+    .stButton button {{
         background: linear-gradient(135deg, #e0b589, #c4895a) !important;
         color: #15151a !important;
         border: none !important;
@@ -98,132 +171,149 @@ st.markdown("""
         font-size: 1rem !important;
         transition: all 0.2s ease;
         box-shadow: 0 4px 16px rgba(224, 181, 137, 0.15);
-    }
-    .stButton button:hover {
+    }}
+    .stButton button:hover {{
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(224, 181, 137, 0.25);
-    }
+    }}
 
     /* Chip buttons */
-    div[data-testid="column"] .stButton button {
-        background: #1f1f26 !important;
-        color: #c8c6d0 !important;
-        border: 1px solid #34343d !important;
+    div[data-testid="column"] .stButton button {{
+        background: {chip_bg} !important;
+        color: {chip_color} !important;
+        border: 1px solid {border} !important;
         border-radius: 999px !important;
         font-weight: 500 !important;
         font-size: 0.85rem !important;
         padding: 0.5rem 1rem !important;
         box-shadow: none !important;
-    }
-    div[data-testid="column"] .stButton button:hover {
-        background: #26262e !important;
+    }}
+    div[data-testid="column"] .stButton button:hover {{
+        background: {chip_hover_bg} !important;
         border-color: #e0b589 !important;
-        color: #f5f3ee !important;
+        color: {text_primary} !important;
         transform: none;
-    }
+    }}
 
     /* Chat bubbles */
-    .chat-user {
-        background: #2a2a35;
-        border: 1px solid #34343d;
+    .chat-user {{
+        background: {chat_user_bg};
+        border: 1px solid {chat_user_border};
         border-radius: 16px 16px 4px 16px;
         padding: 0.9rem 1.2rem;
         margin: 0.5rem 0;
-        color: #f0eee9;
+        color: {chat_user_color};
         font-size: 0.95rem;
         line-height: 1.5;
         margin-left: 3rem;
-    }
+    }}
 
-    .chat-label-user {
+    .chat-label-user {{
         font-size: 0.7rem;
         font-weight: 700;
         letter-spacing: 0.08rem;
         text-transform: uppercase;
-        color: #6e6c78;
+        color: {text_muted};
         margin-bottom: 0.3rem;
         text-align: right;
-    }
+    }}
 
-    .chat-label-assistant {
+    .chat-label-assistant {{
         font-size: 0.7rem;
         font-weight: 700;
         letter-spacing: 0.08rem;
         text-transform: uppercase;
         color: #e0b589;
         margin-bottom: 0.3rem;
-    }
+    }}
 
-    .clear-btn button {
+    .clear-btn button {{
         background: transparent !important;
-        color: #6e6c78 !important;
-        border: 1px solid #2a2a32 !important;
+        color: {text_muted} !important;
+        border: 1px solid {border2} !important;
         border-radius: 8px !important;
         font-size: 0.8rem !important;
         font-weight: 500 !important;
         padding: 0.3rem 0.8rem !important;
         box-shadow: none !important;
-    }
-    .clear-btn button:hover {
+    }}
+    .clear-btn button:hover {{
         color: #e0b589 !important;
         border-color: #e0b589 !important;
         transform: none !important;
         box-shadow: none !important;
-    }
+    }}
 
-    .manifesto-container {
+    .manifesto-container {{
         margin-top: 3.5rem;
-        border-top: 1px solid #2a2a32;
+        border-top: 1px solid {manifesto_border};
         padding-top: 2rem;
-    }
-    .manifesto-header {
+    }}
+    .manifesto-header {{
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05rem;
-        color: #7a7884;
+        color: {manifesto_header_color};
         margin-bottom: 1.2rem;
-    }
+    }}
 
-    .feature-card {
-        background: rgba(255, 255, 255, 0.025);
-        border: 1px solid #2a2a32;
+    .feature-card {{
+        background: {card_bg};
+        border: 1px solid {border2};
         border-radius: 14px;
         padding: 1.25rem;
         height: 100%;
         transition: all 0.2s ease;
-    }
-    .feature-card:hover {
+    }}
+    .feature-card:hover {{
         border-color: #e0b589;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
         transform: translateY(-2px);
-    }
-    .feature-card .icon { font-size: 1.4rem; margin-bottom: 0.5rem; display: block; }
-    .feature-card h4 {
+    }}
+    .feature-card .icon {{ font-size: 1.4rem; margin-bottom: 0.5rem; display: block; }}
+    .feature-card h4 {{
         font-family: 'Fraunces', serif;
         font-size: 1.05rem;
         font-weight: 600;
         margin: 0 0 0.4rem 0;
-        color: #f5f3ee;
-    }
-    .feature-card p {
+        color: {text_primary};
+    }}
+    .feature-card p {{
         font-size: 0.85rem;
-        color: #9b98a3;
+        color: {text_secondary};
         line-height: 1.5;
         margin: 0;
-    }
+    }}
+
+    /* Native container border color */
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
+        border-color: {border2} !important;
+        border-radius: 14px !important;
+    
+    
+    }}
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Header
-st.markdown('<div class="brand-badge">BriefAI</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-title">What can I find for you?</div>', unsafe_allow_html=True)
+# 4. Header row with toggle
+header_col, toggle_col = st.columns([6, 1])
+with header_col:
+    st.markdown('<div class="brand-badge">BriefAI</div>', unsafe_allow_html=True)
+with toggle_col:
+    st.markdown('<div class="toggle-btn">', unsafe_allow_html=True)
+    if st.button(toggle_icon, use_container_width=False):
+        st.session_state.theme = "light" if is_dark else "dark"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown(f'<div class="hero-title">What can I find for you?</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="hero-subtitle">Ask about your files and I\'ll dig through them, read them, and tell you what matters.</div>',
+    f'<div class="hero-subtitle">Ask about your files and I\'ll dig through them, read them, and tell you what matters.</div>',
     unsafe_allow_html=True
 )
 
-# 4. Session state init
+# 5. Session state init
 if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 if "uploaded_file_path" not in st.session_state:
@@ -235,7 +325,7 @@ if "chat_history" not in st.session_state:
 if "last_response" not in st.session_state:
     st.session_state.last_response = ""
 
-# 5. File uploader
+# 6. File uploader
 uploaded_file = st.file_uploader(
     "Drop a file",
     type=["pdf", "docx", "txt"],
@@ -248,18 +338,23 @@ if uploaded_file is not None:
         tmp.write(uploaded_file.read())
         st.session_state.uploaded_file_path = tmp.name
         st.session_state.uploaded_file_name = uploaded_file.name
-    st.success(f"📄 **{uploaded_file.name}** ready — now ask me anything about it.")
 
-# 6. Chat history display
+    # Auto-embed on upload
+    with st.spinner(f"Indexing {uploaded_file.name}..."):
+        try:
+            from backend.agent.tools import embed_and_index
+            embed_and_index(st.session_state.uploaded_file_path)
+            st.success(f"📄 **{uploaded_file.name}** indexed — now ask me anything about it.")
+        except Exception as e:
+            st.warning(f"📄 **{uploaded_file.name}** uploaded but couldn't be indexed: {e}")
+
+# 7. Chat history display
 if st.session_state.chat_history:
     for i, turn in enumerate(st.session_state.chat_history):
-        # User bubble
         st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="chat-user">{turn["user"]}</div>', unsafe_allow_html=True)
-        # Assistant bubble
         st.markdown(f'<div class="chat-label-assistant">BriefAI</div>', unsafe_allow_html=True)
         st.markdown(turn["assistant"])
-        # Copy button — only on latest answer
         if i == len(st.session_state.chat_history) - 1:
             copy_text = turn["assistant"].replace("'", "\\'").replace("\n", "\\n").replace("\r", "")
             components.html(f"""
@@ -292,7 +387,6 @@ if st.session_state.chat_history:
             """, height=45)
         st.markdown("---")
 
-    # Clear chat button
     st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
     if st.button("✕ Clear chat", use_container_width=False):
         st.session_state.chat_history = []
@@ -300,7 +394,7 @@ if st.session_state.chat_history:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 7. Input form
+# 8. Input form
 with st.form(key="query_form", clear_on_submit=True):
     user_input = st.text_input(
         "Task Input",
@@ -310,7 +404,7 @@ with st.form(key="query_form", clear_on_submit=True):
     )
     run_triggered = st.form_submit_button("Ask BriefAI", use_container_width=True)
 
-# 8. Example chips — always visible
+# 9. Example chips
 if not run_triggered:
     chip_col1, chip_col2, chip_col3 = st.columns(3)
     examples = [
@@ -324,7 +418,7 @@ if not run_triggered:
                 st.session_state.user_input = example
                 st.rerun()
 
-# 9. Run agent on submit
+# 10. Run agent on submit
 if run_triggered and user_input:
     st.session_state.user_input = ""
 
@@ -355,7 +449,7 @@ if run_triggered and user_input:
     else:
         st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
 
-# 10. Landing feature grid — always visible
+# 11. Landing feature grid
 if not run_triggered:
     st.markdown('<div class="manifesto-container">', unsafe_allow_html=True)
     st.markdown('<div class="manifesto-header">What BriefAI can do</div>', unsafe_allow_html=True)

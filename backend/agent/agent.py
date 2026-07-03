@@ -1,5 +1,5 @@
 from backend.agent.planner import create_plan
-from backend.agent.tools import list_documents, read_pdf, read_text_file, read_word_file
+from backend.agent.tools import list_documents, read_pdf, read_text_file, read_word_file, embed_and_index, search_documents
 from backend.agent.responder import generate_response
 import time
 
@@ -7,13 +7,17 @@ TOOLS = {
     "list_documents": list_documents,
     "read_pdf": read_pdf,
     "read_word_file": read_word_file,
-    "read_text_file": read_text_file
+    "read_text_file": read_text_file,
+    "embed_and_index": embed_and_index,
+    "search_documents": search_documents
 }
+
 
 def log_step(step):
     print("\n🧠 STEP:")
     print(step)
     time.sleep(0.2)
+
 
 def build_timeline(tool_results):
     timeline = []
@@ -26,10 +30,11 @@ def build_timeline(tool_results):
             timeline.append({"type": "error", "content": item["error"]})
     return timeline
 
+
 def run_agent(user_input: str, chat_history: list = None):
     chat_history = chat_history or []
     tool_results = []
-    max_steps = 8
+    max_steps = 10
     current_input = user_input
 
     for step_num in range(max_steps):
