@@ -3,6 +3,19 @@ from backend.agent.agent import run_agent
 import tempfile
 import os
 import streamlit.components.v1 as components
+from fpdf import FPDF
+
+
+def generate_pdf(text: str) -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    pdf.set_margins(20, 20, 20)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    clean_text = text.encode("latin-1", "replace").decode("latin-1")
+    pdf.multi_cell(0, 7, clean_text)
+    return pdf.output()
+
 
 # 1. Page Configuration
 st.set_page_config(page_title="BriefAI", page_icon="📄", layout="centered")
@@ -145,6 +158,21 @@ st.markdown(f"""
     [data-testid="stFileUploader"] label {{ color: {text_muted} !important; font-size: 0.85rem !important; }}
     [data-testid="stFileDropzoneInstructions"] {{ color: {text_muted} !important; font-size: 0.82rem !important; }}
 
+    /* Fix file uploader button in light mode */
+    [data-testid="stFileUploader"] section {{
+        background: {surface} !important;
+        border-color: {border} !important;
+    }}
+    [data-testid="stFileUploader"] section > button {{
+        background: {surface} !important;
+        color: {text_primary} !important;
+        border: 1px solid {border} !important;
+        border-radius: 8px !important;
+    }}
+    [data-testid="stFileUploader"] section span {{
+        color: {text_secondary} !important;
+    }}
+
     .stTextInput input {{
         background: {input_bg} !important;
         border: 1px solid {border} !important;
@@ -244,6 +272,25 @@ st.markdown(f"""
         box-shadow: none !important;
     }}
 
+    /* Download button */
+    [data-testid="stDownloadButton"] button {{
+        background: transparent !important;
+        color: {text_muted} !important;
+        border: 1px solid {border2} !important;
+        border-radius: 8px !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        padding: 0.3rem 0.8rem !important;
+        box-shadow: none !important;
+        width: auto !important;
+    }}
+    [data-testid="stDownloadButton"] button:hover {{
+        color: #e0b589 !important;
+        border-color: #e0b589 !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }}
+
     .manifesto-container {{
         margin-top: 3.5rem;
         border-top: 1px solid {manifesto_border};
@@ -290,8 +337,6 @@ st.markdown(f"""
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         border-color: {border2} !important;
         border-radius: 14px !important;
-    
-    
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -339,7 +384,6 @@ if uploaded_file is not None:
         st.session_state.uploaded_file_path = tmp.name
         st.session_state.uploaded_file_name = uploaded_file.name
 
-    # Auto-embed on upload
     with st.spinner(f"Indexing {uploaded_file.name}..."):
         try:
             from backend.agent.tools import embed_and_index
@@ -355,6 +399,7 @@ if st.session_state.chat_history:
         st.markdown(f'<div class="chat-user">{turn["user"]}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="chat-label-assistant">BriefAI</div>', unsafe_allow_html=True)
         st.markdown(turn["assistant"])
+
         if i == len(st.session_state.chat_history) - 1:
             copy_text = turn["assistant"].replace("'", "\\'").replace("\n", "\\n").replace("\r", "")
             components.html(f"""
@@ -385,6 +430,17 @@ if st.session_state.chat_history:
                     font-family: Inter, sans-serif;
                 ">⎘ Copy answer</button>
             """, height=45)
+
+            # Download as PDF button
+            pdf_bytes = generate_pdf(turn["assistant"])
+            st.download_button(
+                label="⬇ Download as PDF",
+                data=bytes(pdf_bytes),
+                file_name="BriefAI_Answer.pdf",
+                mime="application/pdf",
+                use_container_width=False
+            )
+
         st.markdown("---")
 
     st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
