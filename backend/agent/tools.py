@@ -3,6 +3,7 @@ from pypdf import PdfReader
 import docx
 from backend.agent.embedder import embed_document, is_document_embedded
 from backend.agent.retriever import search_documents as _search_documents
+from openai import OpenAI
 
 
 def list_documents(folder_path: str):
@@ -115,4 +116,44 @@ def search_documents(query: str):
     return {
         "status": "success",
         "results": hits
+    }
+
+def read_image(file_path: str):
+    import base64
+    if not os.path.exists(file_path):
+        raise Exception(f"File not found: {file_path}")
+
+    with open(file_path, "rb") as f:
+        image_data = base64.b64encode(f.read()).decode("utf-8")
+
+    ext = os.path.splitext(file_path)[1].lower().replace(".", "")
+    if ext == "jpg":
+        ext = "jpeg"
+
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/{ext};base64,{image_data}"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": "Describe this image in detail. Extract any text, data, charts, or important information visible."
+                    }
+                ]
+            }
+        ],
+        max_tokens=1000
+    )
+
+    return {
+        "path": file_path,
+        "content": response.choices[0].message.content
     }

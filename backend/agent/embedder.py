@@ -47,3 +47,26 @@ def embed_document(file_path: str, content: str):
 def is_document_embedded(file_path: str):
     results = collection.get(where={"file_path": file_path})
     return len(results["ids"]) > 0
+
+
+def get_indexed_files():
+    results = collection.get(include=["metadatas"])
+    if not results["metadatas"]:
+        return []
+    seen = set()
+    files = []
+    for meta in results["metadatas"]:
+        path = meta.get("file_path", "")
+        if path and path not in seen:
+            seen.add(path)
+            files.append({
+                "name": os.path.basename(path),
+                "path": path
+            })
+    return files
+
+def delete_document(file_path: str):
+    results = collection.get(where={"file_path": file_path})
+    if results["ids"]:
+        collection.delete(ids=results["ids"])
+    return True

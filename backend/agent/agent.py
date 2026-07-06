@@ -1,6 +1,5 @@
 from backend.agent.planner import create_plan
-from backend.agent.tools import list_documents, read_pdf, read_text_file, read_word_file, embed_and_index, search_documents
-from backend.agent.responder import generate_response
+from backend.agent.tools import list_documents, read_pdf, read_text_file, read_word_file, embed_and_index, search_documents, read_image
 import time
 
 TOOLS = {
@@ -9,7 +8,8 @@ TOOLS = {
     "read_word_file": read_word_file,
     "read_text_file": read_text_file,
     "embed_and_index": embed_and_index,
-    "search_documents": search_documents
+    "search_documents": search_documents,
+    "read_image": read_image
 }
 
 

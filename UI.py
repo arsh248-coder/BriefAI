@@ -18,7 +18,7 @@ def generate_pdf(text: str) -> bytes:
 
 
 # 1. Page Configuration
-st.set_page_config(page_title="BriefAI", page_icon="📄", layout="centered")
+st.set_page_config(page_title="BriefAI", page_icon="📄", layout="wide")
 
 # 2. Theme state init
 if "theme" not in st.session_state:
@@ -49,7 +49,11 @@ if is_dark:
     manifesto_border = "#2a2a32"
     manifesto_header_color = "#7a7884"
     toggle_icon = "☀️"
-    toggle_label = "Light mode"
+    sidebar_bg = "#13131a"
+    sidebar_border = "#2a2a32"
+    sidebar_item_bg = "#1f1f26"
+    sidebar_item_border = "#2a2a32"
+    sidebar_text = "#c8c6d0"
 else:
     bg = "radial-gradient(circle at 50% 0%, #fdfcf9 0%, #f7f5f0 60%, #f2efe8 100%)"
     text_primary = "#1c1c1e"
@@ -72,7 +76,11 @@ else:
     manifesto_border = "#ece8df"
     manifesto_header_color = "#a8a6b0"
     toggle_icon = "🌙"
-    toggle_label = "Dark mode"
+    sidebar_bg = "#faf8f3"
+    sidebar_border = "#ece8df"
+    sidebar_item_bg = "#ffffff"
+    sidebar_item_border = "#e3e0d8"
+    sidebar_text = "#4a4a52"
 
 # 3. CSS
 st.markdown(f"""
@@ -86,7 +94,7 @@ st.markdown(f"""
         color: {text_primary};
     }}
 
-    .main .block-container {{ padding-top: 5rem; max-width: 760px; }}
+    .main .block-container {{ padding-top: 5rem; max-width: 760px; margin: 0 auto; }}
 
     @keyframes fadeUp {{
         from {{ opacity: 0; transform: translateY(8px); }}
@@ -126,6 +134,45 @@ st.markdown(f"""
         margin-bottom: 2rem;
     }}
 
+    /* Sidebar */
+    [data-testid="stSidebar"] {{
+        background: {sidebar_bg} !important;
+        border-right: 1px solid {sidebar_border} !important;
+    }}
+    [data-testid="stSidebar"] .stMarkdown p {{
+        color: {sidebar_text} !important;
+        font-size: 0.85rem;
+    }}
+
+    .sidebar-header {{
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08rem;
+        color: #e0b589;
+        margin-bottom: 0.8rem;
+    }}
+
+    /* Sidebar remove button */
+    [data-testid="stSidebar"] .stButton button {{
+        background: transparent !important;
+        color: {text_muted} !important;
+        border: none !important;
+        border-radius: 4px !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        padding: 0.1rem 0.3rem !important;
+        box-shadow: none !important;
+        min-height: 0 !important;
+        line-height: 1 !important;
+    }}
+    [data-testid="stSidebar"] .stButton button:hover {{
+        color: #e05858 !important;
+        background: rgba(224, 88, 88, 0.08) !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }}
+
     /* Toggle button */
     .toggle-btn button {{
         background: transparent !important;
@@ -157,8 +204,6 @@ st.markdown(f"""
     [data-testid="stFileUploader"]:hover {{ border-color: #e0b589; }}
     [data-testid="stFileUploader"] label {{ color: {text_muted} !important; font-size: 0.85rem !important; }}
     [data-testid="stFileDropzoneInstructions"] {{ color: {text_muted} !important; font-size: 0.82rem !important; }}
-
-    /* Fix file uploader button in light mode */
     [data-testid="stFileUploader"] section {{
         background: {surface} !important;
         border-color: {border} !important;
@@ -333,7 +378,6 @@ st.markdown(f"""
         margin: 0;
     }}
 
-    /* Native container border color */
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         border-color: {border2} !important;
         border-radius: 14px !important;
@@ -341,7 +385,54 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. Header row with toggle
+# 4. Sidebar — file history
+with st.sidebar:
+    st.markdown('<div class="sidebar-header">📚 Indexed Documents</div>', unsafe_allow_html=True)
+    st.markdown("Files BriefAI has read and remembers:")
+    st.markdown("---")
+
+    try:
+        from backend.agent.embedder import get_indexed_files, delete_document
+        indexed_files = get_indexed_files()
+
+        if not indexed_files:
+            st.markdown(
+                f'<p style="color:{text_muted};font-size:0.82rem;">No files indexed yet — upload a file or ask BriefAI to read one.</p>',
+                unsafe_allow_html=True
+            )
+        else:
+            for f in indexed_files:
+                col_name, col_del = st.columns([5, 1])
+                with col_name:
+                    st.markdown(f"""
+                        <div style="
+                            font-size: 0.82rem;
+                            color: {sidebar_text};
+                            padding: 0.3rem 0;
+                            border-bottom: 1px solid {sidebar_border};
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        ">📄 {f['name']}</div>
+                    """, unsafe_allow_html=True)
+                with col_del:
+                    if st.button("✕", key=f"del_{f['path']}", help=f"Remove {f['name']}"):
+                        delete_document(f["path"])
+                        st.rerun()
+
+    except Exception as e:
+        st.markdown(
+            f'<p style="color:{text_muted};font-size:0.82rem;">Could not load index.</p>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown("---")
+    st.markdown(
+        f'<p style="color:{text_muted};font-size:0.75rem;">BriefAI remembers these files across sessions using ChromaDB.</p>',
+        unsafe_allow_html=True
+    )
+
+# 5. Header row with toggle
 header_col, toggle_col = st.columns([6, 1])
 with header_col:
     st.markdown('<div class="brand-badge">BriefAI</div>', unsafe_allow_html=True)
@@ -358,7 +449,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 5. Session state init
+# 6. Session state init
 if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 if "uploaded_file_path" not in st.session_state:
@@ -370,29 +461,40 @@ if "chat_history" not in st.session_state:
 if "last_response" not in st.session_state:
     st.session_state.last_response = ""
 
-# 6. File uploader
-uploaded_file = st.file_uploader(
-    "Drop a file",
-    type=["pdf", "docx", "txt"],
-    label_visibility="collapsed"
+# 7. File uploader — multi-file
+uploaded_files = st.file_uploader(
+    "Drop files",
+    type=["pdf", "docx", "txt", "jpg", "jpeg", "png", "gif", "webp"],
+    label_visibility="collapsed",
+    accept_multiple_files=True
 )
 
-if uploaded_file is not None:
-    suffix = os.path.splitext(uploaded_file.name)[1]
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(uploaded_file.read())
-        st.session_state.uploaded_file_path = tmp.name
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, uploaded_file.name)
+
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.read())
+
+        st.session_state.uploaded_file_path = temp_path
         st.session_state.uploaded_file_name = uploaded_file.name
 
-    with st.spinner(f"Indexing {uploaded_file.name}..."):
-        try:
-            from backend.agent.tools import embed_and_index
-            embed_and_index(st.session_state.uploaded_file_path)
-            st.success(f"📄 **{uploaded_file.name}** indexed — now ask me anything about it.")
-        except Exception as e:
-            st.warning(f"📄 **{uploaded_file.name}** uploaded but couldn't be indexed: {e}")
+        ext = os.path.splitext(uploaded_file.name)[1].lower()
+        image_exts = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
 
-# 7. Chat history display
+        if ext not in image_exts:
+            with st.spinner(f"Indexing {uploaded_file.name}..."):
+                try:
+                    from backend.agent.tools import embed_and_index
+                    embed_and_index(temp_path)
+                    st.success(f"📄 **{uploaded_file.name}** indexed.")
+                except Exception as e:
+                    st.warning(f"📄 **{uploaded_file.name}** couldn't be indexed: {e}")
+        else:
+            st.success(f"🖼 **{uploaded_file.name}** ready — ask me anything about it.")
+
+# 8. Chat history display
 if st.session_state.chat_history:
     for i, turn in enumerate(st.session_state.chat_history):
         st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
@@ -431,7 +533,6 @@ if st.session_state.chat_history:
                 ">⎘ Copy answer</button>
             """, height=45)
 
-            # Download as PDF button
             pdf_bytes = generate_pdf(turn["assistant"])
             st.download_button(
                 label="⬇ Download as PDF",
@@ -450,17 +551,17 @@ if st.session_state.chat_history:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 8. Input form
+# 9. Input form
 with st.form(key="query_form", clear_on_submit=True):
     user_input = st.text_input(
         "Task Input",
-        value=st.session_state.user_input,
+        value="",
         label_visibility="collapsed",
         placeholder="e.g. Summarize the uploaded file, or find my resume..."
     )
     run_triggered = st.form_submit_button("Ask BriefAI", use_container_width=True)
 
-# 9. Example chips
+# 10. Example chips
 if not run_triggered:
     chip_col1, chip_col2, chip_col3 = st.columns(3)
     examples = [
@@ -474,17 +575,26 @@ if not run_triggered:
                 st.session_state.user_input = example
                 st.rerun()
 
-# 10. Run agent on submit
+# 11. Run agent on submit
 if run_triggered and user_input:
     st.session_state.user_input = ""
 
     enriched_input = user_input
     if st.session_state.uploaded_file_path:
-        enriched_input = (
-            f"{user_input}\n\n"
-            f"[The user has uploaded a file. Use this path directly: "
-            f"{st.session_state.uploaded_file_path}]"
-        )
+        ext = os.path.splitext(st.session_state.uploaded_file_path)[1].lower()
+        image_exts = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+        if ext in image_exts:
+            enriched_input = (
+                f"{user_input}\n\n"
+                f"[The user has uploaded an image. Use read_image on this path directly: "
+                f"{st.session_state.uploaded_file_path}]"
+            )
+        else:
+            enriched_input = (
+                f"{user_input}\n\n"
+                f"[The user has uploaded a file. Use this path directly: "
+                f"{st.session_state.uploaded_file_path}]"
+            )
 
     with st.spinner("Reading through your files..."):
         try:
@@ -505,7 +615,7 @@ if run_triggered and user_input:
     else:
         st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
 
-# 11. Landing feature grid
+# 12. Landing feature grid
 if not run_triggered:
     st.markdown('<div class="manifesto-container">', unsafe_allow_html=True)
     st.markdown('<div class="manifesto-header">What BriefAI can do</div>', unsafe_allow_html=True)

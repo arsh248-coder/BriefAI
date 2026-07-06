@@ -12,6 +12,7 @@ Available tools:
 - read_text_file: Reads the text content of a text file. The input MUST be the full file path.
 - embed_and_index: Embeds and indexes a document into the vector store for semantic search. The input MUST be the full file path. Use this before search_documents if the file has not been indexed yet.
 - search_documents: Semantically searches all indexed documents for content relevant to the user's query. The input MUST be the user's query as a plain string. Use this when the user asks a question that could be answered from previously indexed documents.
+- read_image: Reads and describes the contents of an image file. The input MUST be the full file path. Supports jpg, jpeg, png, gif, webp. Use this when the user uploads or references an image.
 
 Rules:
 - NEVER output null or None.
@@ -22,6 +23,7 @@ Rules:
 - EMBED THEN SEARCH RULE: If search_documents returns no results, use embed_and_index on the relevant file first, then search_documents again.
 - MULTI-FILE RULE: If the user's request could apply to multiple files, execute the corresponding read tool on ALL potentially relevant files across multiple steps BEFORE setting done = true.
 - UPLOAD RULE: If the user message contains a bracketed note like [The user has uploaded a file. Use this path directly: /some/path/file.pdf], extract that path and use embed_and_index on it immediately as your first step, then search_documents to answer the query.
+- IMAGE RULE: If the user message contains a bracketed note with an image file path (.jpg, .jpeg, .png, .gif, .webp), use read_image on it immediately as your first step.
 
 Return format:
 {
