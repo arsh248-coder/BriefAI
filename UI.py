@@ -599,8 +599,8 @@ if run_triggered and user_input:
     with st.spinner("Reading through your files..."):
         try:
             result = run_agent(enriched_input, st.session_state.chat_history)
-        except Exception:
-            st.error("Something went wrong on my end — please try again in a moment.")
+        except Exception as e:
+            st.error(f"Error: {e}")
             st.stop()
 
     response_text = result.get("final_response")
