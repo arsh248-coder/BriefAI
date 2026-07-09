@@ -385,8 +385,45 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. Sidebar — file history
+# 4. Sidebar
 with st.sidebar:
+    st.markdown('<div class="sidebar-header">⚙️ Settings</div>', unsafe_allow_html=True)
+
+    # Mode selector
+    mode = st.radio(
+        "AI Mode",
+        options=["☁️ Cloud (OpenAI)", "🔒 Local (Private)"],
+        index=0,
+        help="Local mode runs fully on your machine — no data sent anywhere"
+    )
+    st.session_state.ai_mode = "local" if "Local" in mode else "openai"
+
+    if st.session_state.ai_mode == "openai":
+        api_key_input = st.text_input(
+            "OpenAI API Key",
+            value=st.session_state.get("openai_api_key", ""),
+            type="password",
+            placeholder="sk-...",
+            help="Your key is never stored — session only"
+        )
+        if api_key_input:
+            st.session_state.openai_api_key = api_key_input
+            st.success("✓ Key set")
+        elif not st.session_state.get("openai_api_key"):
+            st.warning("Enter your OpenAI API key to use Cloud mode")
+    else:
+        from backend.agent.hardware import get_best_model, get_vram_gb
+        model_name, reason = get_best_model()
+        vram = get_vram_gb()
+        st.success("🔒 Fully local — nothing leaves your machine")
+        st.markdown(
+            f'<p style="color:{text_muted};font-size:0.78rem;">Model: <b>{model_name}</b><br>{reason}</p>',
+            unsafe_allow_html=True
+        )
+        if vram < 8:
+            st.warning("⚠️ Response times may be slow on your GPU. Local mode prioritises privacy over speed.")
+    st.markdown("---")
+
     st.markdown('<div class="sidebar-header">📚 Indexed Documents</div>', unsafe_allow_html=True)
     st.markdown("Files BriefAI has read and remembers:")
     st.markdown("---")
@@ -460,6 +497,10 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "last_response" not in st.session_state:
     st.session_state.last_response = ""
+if "openai_api_key" not in st.session_state:
+    st.session_state.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+if "ai_mode" not in st.session_state:
+    st.session_state.ai_mode = "openai"
 
 # 7. File uploader — multi-file
 uploaded_files = st.file_uploader(
@@ -487,14 +528,91 @@ if uploaded_files:
             with st.spinner(f"Indexing {uploaded_file.name}..."):
                 try:
                     from backend.agent.tools import embed_and_index
-                    embed_and_index(temp_path)
+                    embed_and_index(
+                        temp_path,
+                        mode=st.session_state.get("ai_mode", "openai"),
+                        api_key=st.session_state.get("openai_api_key")
+                    )
                     st.success(f"📄 **{uploaded_file.name}** indexed.")
                 except Exception as e:
                     st.warning(f"📄 **{uploaded_file.name}** couldn't be indexed: {e}")
         else:
             st.success(f"🖼 **{uploaded_file.name}** ready — ask me anything about it.")
 
-# 8. Chat history display
+# 8. Input form — ABOVE chat history
+with st.form(key="query_form", clear_on_submit=True):
+    user_input = st.text_input(
+        "Task Input",
+        value="",
+        label_visibility="collapsed",
+        placeholder="e.g. Summarize the uploaded file, or find my resume..."
+    )
+    run_triggered = st.form_submit_button("Ask BriefAI", use_container_width=True)
+
+# 9. Example chips
+if not run_triggered:
+    chip_col1, chip_col2, chip_col3 = st.columns(3)
+    examples = [
+        "List my recent documents",
+        "Summarize my resume",
+        "Find my latest proposal"
+    ]
+    for col, example in zip([chip_col1, chip_col2, chip_col3], examples):
+        with col:
+            if st.button(example, use_container_width=True):
+                st.session_state.user_input = example
+                st.rerun()
+
+# 10. Run agent on submit
+if run_triggered and user_input:
+    if st.session_state.ai_mode == "openai" and not st.session_state.get("openai_api_key"):
+        st.error("Please enter your OpenAI API key in the sidebar, or switch to Local mode.")
+        st.stop()
+
+    st.session_state.user_input = ""
+
+    enriched_input = user_input
+    if st.session_state.uploaded_file_path:
+        ext = os.path.splitext(st.session_state.uploaded_file_path)[1].lower()
+        image_exts = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+        if ext in image_exts:
+            enriched_input = (
+                f"{user_input}\n\n"
+                f"[The user has uploaded an image. Use read_image on this path directly: "
+                f"{st.session_state.uploaded_file_path}]"
+            )
+        else:
+            enriched_input = (
+                f"{user_input}\n\n"
+                f"[The user has uploaded a file. Use this path directly: "
+                f"{st.session_state.uploaded_file_path}]"
+            )
+
+    with st.spinner("Reading through your files..."):
+        try:
+            result = run_agent(
+                enriched_input,
+                st.session_state.chat_history,
+                api_key=st.session_state.get("openai_api_key"),
+                mode=st.session_state.ai_mode
+            )
+        except Exception as e:
+            st.error(f"Error: {e}")
+            st.stop()
+
+    response_text = result.get("final_response")
+
+    if response_text:
+        st.session_state.chat_history.append({
+            "user": user_input,
+            "assistant": response_text
+        })
+        st.session_state.last_response = response_text
+        st.rerun()
+    else:
+        st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
+
+# 11. Chat history display — BELOW input
 if st.session_state.chat_history:
     for i, turn in enumerate(st.session_state.chat_history):
         st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
@@ -550,70 +668,6 @@ if st.session_state.chat_history:
         st.session_state.last_response = ""
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-
-# 9. Input form
-with st.form(key="query_form", clear_on_submit=True):
-    user_input = st.text_input(
-        "Task Input",
-        value="",
-        label_visibility="collapsed",
-        placeholder="e.g. Summarize the uploaded file, or find my resume..."
-    )
-    run_triggered = st.form_submit_button("Ask BriefAI", use_container_width=True)
-
-# 10. Example chips
-if not run_triggered:
-    chip_col1, chip_col2, chip_col3 = st.columns(3)
-    examples = [
-        "List my recent documents",
-        "Summarize my resume",
-        "Find my latest proposal"
-    ]
-    for col, example in zip([chip_col1, chip_col2, chip_col3], examples):
-        with col:
-            if st.button(example, use_container_width=True):
-                st.session_state.user_input = example
-                st.rerun()
-
-# 11. Run agent on submit
-if run_triggered and user_input:
-    st.session_state.user_input = ""
-
-    enriched_input = user_input
-    if st.session_state.uploaded_file_path:
-        ext = os.path.splitext(st.session_state.uploaded_file_path)[1].lower()
-        image_exts = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
-        if ext in image_exts:
-            enriched_input = (
-                f"{user_input}\n\n"
-                f"[The user has uploaded an image. Use read_image on this path directly: "
-                f"{st.session_state.uploaded_file_path}]"
-            )
-        else:
-            enriched_input = (
-                f"{user_input}\n\n"
-                f"[The user has uploaded a file. Use this path directly: "
-                f"{st.session_state.uploaded_file_path}]"
-            )
-
-    with st.spinner("Reading through your files..."):
-        try:
-            result = run_agent(enriched_input, st.session_state.chat_history)
-        except Exception as e:
-            st.error(f"Error: {e}")
-            st.stop()
-
-    response_text = result.get("final_response")
-
-    if response_text:
-        st.session_state.chat_history.append({
-            "user": user_input,
-            "assistant": response_text
-        })
-        st.session_state.last_response = response_text
-        st.rerun()
-    else:
-        st.info("I finished, but didn't have anything to report back — try rephrasing your question.")
 
 # 12. Landing feature grid
 if not run_triggered:

@@ -1,13 +1,18 @@
 import chromadb
 from openai import OpenAI
+import ollama
 import os
 import hashlib
-
-client = OpenAI()
 
 # Persistent ChromaDB client
 chroma_client = chromadb.PersistentClient(path="/app/chromadb_data")
 collection = chroma_client.get_or_create_collection(name="briefai_docs")
+
+
+def get_client(api_key=None):
+    if api_key:
+        return OpenAI(api_key=api_key)
+    return OpenAI()
 
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
@@ -22,19 +27,24 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
     return chunks
 
 
-def embed_text(text: str):
-    response = client.embeddings.create(
-        input=text,
-        model="text-embedding-3-small"
-    )
-    return response.data[0].embedding
+def embed_text(text: str, api_key=None, mode="openai"):
+    if mode == "local":
+        response = ollama.embeddings(model="nomic-embed-text", prompt=text)
+        return response["embedding"]
+    else:
+        client = get_client(api_key)
+        response = client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
 
 
-def embed_document(file_path: str, content: str):
+def embed_document(file_path: str, content: str, api_key=None, mode="openai"):
     chunks = chunk_text(content)
     for i, chunk in enumerate(chunks):
         chunk_id = hashlib.md5(f"{file_path}_{i}".encode()).hexdigest()
-        embedding = embed_text(chunk)
+        embedding = embed_text(chunk, api_key=api_key, mode=mode)
         collection.upsert(
             ids=[chunk_id],
             embeddings=[embedding],
@@ -64,6 +74,7 @@ def get_indexed_files():
                 "path": path
             })
     return files
+
 
 def delete_document(file_path: str):
     results = collection.get(where={"file_path": file_path})

@@ -82,7 +82,7 @@ def read_word_file(file_path: str):
         return f"Error parsing Word file: {str(e)}"
 
 
-def embed_and_index(file_path: str):
+def embed_and_index(file_path: str, mode="openai", api_key=None):
     if is_document_embedded(file_path):
         return {"status": "already_indexed", "file_path": file_path}
 
@@ -98,7 +98,7 @@ def embed_and_index(file_path: str):
         raise Exception(f"Unsupported file type: {ext}")
 
     content = result.get("content", "") if isinstance(result, dict) else str(result)
-    chunks_created = embed_document(file_path, content)
+    chunks_created = embed_document(file_path, content, api_key=api_key, mode=mode)
 
     return {
         "status": "indexed",

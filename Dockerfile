@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE 8501
 
+ENV OLLAMA_HOST=http://host.docker.internal:11434
+
 CMD ["streamlit", "run", "UI.py", "--server.port=8501", "--server.address=0.0.0.0"]

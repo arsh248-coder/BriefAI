@@ -1,7 +1,7 @@
 from backend.agent.planner import create_plan
 from backend.agent.tools import list_documents, read_pdf, read_text_file, read_word_file, embed_and_index, search_documents, read_image
-import time
 from backend.agent.responder import generate_response
+import time
 
 TOOLS = {
     "list_documents": list_documents,
@@ -32,14 +32,14 @@ def build_timeline(tool_results):
     return timeline
 
 
-def run_agent(user_input: str, chat_history: list = None):
+def run_agent(user_input: str, chat_history: list = None, api_key: str = None, mode: str = "openai"):
     chat_history = chat_history or []
     tool_results = []
     max_steps = 10
     current_input = user_input
 
     for step_num in range(max_steps):
-        decision = create_plan(current_input, tool_results, chat_history)
+        decision = create_plan(current_input, tool_results, chat_history, api_key=api_key, mode=mode)
 
         tool_name = decision.get("tool") or "none"
         tool_input = decision.get("input") or ""
@@ -88,7 +88,7 @@ Latest observation:
             tool_results.append({"step": step_num, "tool": tool_name, "error": str(e)})
             break
 
-    final_response = generate_response(user_input, tool_results, chat_history)
+    final_response = generate_response(user_input, tool_results, chat_history, api_key=api_key, mode=mode)
 
     return {
         "user_input": user_input,
