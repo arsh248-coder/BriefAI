@@ -153,6 +153,26 @@ st.markdown(f"""
         margin-bottom: 0.8rem;
     }}
 
+    /* Hide Streamlit default chrome */
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+header {{ visibility: hidden; }}
+[data-testid="stToolbar"] {{ display: none; }}
+[data-testid="stDecoration"] {{ display: none; }}
+[data-testid="stStatusWidget"] {{ display: none; }}
+.viewerBadge_container__1QSob {{ display: none; }}
+
+/* Fix warning box color */
+[data-testid="stAlert"] {{
+    background: rgba(224, 181, 137, 0.08) !important;
+    border: 1px solid rgba(224, 181, 137, 0.3) !important;
+    border-radius: 10px !important;
+    color: {text_secondary} !important;
+}}
+[data-testid="stAlert"] p {{
+    color: {text_secondary} !important;
+}}
+
     /* Sidebar remove button */
     [data-testid="stSidebar"] .stButton button {{
         background: transparent !important;
@@ -501,6 +521,59 @@ if "openai_api_key" not in st.session_state:
     st.session_state.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
 if "ai_mode" not in st.session_state:
     st.session_state.ai_mode = "openai"
+if "onboarded" not in st.session_state:
+    st.session_state.onboarded = False
+# Onboarding flow — only shows on first visit
+if not st.session_state.onboarded:
+    st.markdown(f"""
+        <div style="max-width:560px;margin:2rem auto;text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:2.2rem;font-weight:600;color:{text_primary};margin-bottom:0.5rem;">Welcome to BriefAI</div>
+            <div style="color:{text_secondary};font-size:1rem;margin-bottom:2.5rem;line-height:1.6;">Your private AI document assistant. Here's how to get started in 3 steps.</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    card1, card2, card3 = st.columns(1), st.columns(1), st.columns(1)
+
+    st.markdown(f"""
+        <div style="background:{card_bg};border:1px solid {border2};border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1rem;display:flex;align-items:flex-start;gap:1rem;">
+            <div style="font-size:1.4rem;min-width:2.5rem;text-align:center;">⚙️</div>
+            <div>
+                <div style="font-weight:600;color:{text_primary};margin-bottom:0.3rem;">Step 1 — Choose your AI mode</div>
+                <div style="font-size:0.85rem;color:{text_secondary};line-height:1.5;">
+                    <b style="color:{text_primary};">☁️ Cloud mode</b> uses OpenAI's API — fast, accurate, requires your API key. Text is processed externally.<br><br>
+                    <b style="color:{text_primary};">🔒 Local mode</b> runs entirely on your machine using Ollama. Nothing ever leaves your device — ideal for sensitive documents like legal or medical files. Slower but fully private.
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div style="background:{card_bg};border:1px solid {border2};border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1rem;display:flex;align-items:flex-start;gap:1rem;">
+            <div style="font-size:1.4rem;min-width:2.5rem;text-align:center;">📄</div>
+            <div>
+                <div style="font-weight:600;color:{text_primary};margin-bottom:0.3rem;">Step 2 — Upload your files</div>
+                <div style="font-size:0.85rem;color:{text_secondary};line-height:1.5;">Drop in PDFs, Word docs, text files, or images. BriefAI reads and indexes them into memory so you can ask questions about them instantly. Files are remembered across sessions.</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div style="background:{card_bg};border:1px solid {border2};border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:2rem;display:flex;align-items:flex-start;gap:1rem;">
+            <div style="font-size:1.4rem;min-width:2.5rem;text-align:center;">💬</div>
+            <div>
+                <div style="font-weight:600;color:{text_primary};margin-bottom:0.3rem;">Step 3 — Ask anything</div>
+                <div style="font-size:0.85rem;color:{text_secondary};line-height:1.5;">Summarize documents, compare files, extract key information, or search across everything you've uploaded — just ask in plain English.</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col_l, col_btn, col_r = st.columns([2, 3, 2])
+    with col_btn:
+        if st.button("✦ Get Started", type="primary", use_container_width=True):
+            st.session_state.onboarded = True
+            st.rerun()
+
+    st.stop()
 
 # 7. File uploader — multi-file
 uploaded_files = st.file_uploader(
@@ -614,7 +687,8 @@ if run_triggered and user_input:
 
 # 11. Chat history display — BELOW input
 if st.session_state.chat_history:
-    for i, turn in enumerate(st.session_state.chat_history):
+    for i, turn in enumerate(reversed(st.session_state.chat_history)):
+        i = len(st.session_state.chat_history) - 1 - i
         st.markdown(f'<div class="chat-label-user">You</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="chat-user">{turn["user"]}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="chat-label-assistant">BriefAI</div>', unsafe_allow_html=True)
